@@ -3,7 +3,7 @@
   "name": "YouTube Shorts Filter",
   "description": "Hide YouTube Shorts from recommendations or play them as normal videos.",
   "version": "1.0.0",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": ["storage", "scripting", "activeTab", "declarativeNetRequest"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -16,7 +16,25 @@
     {
       "matches": ["*://www.youtube.com/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
+    }
+  ],
+  "host_permissions": [
+    "*://www.youtube.com/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["*://www.youtube.com/*"]
     }
   ],
   "icons": {
