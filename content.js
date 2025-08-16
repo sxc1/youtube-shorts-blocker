@@ -51,9 +51,24 @@ function handleNavigateEvent(e) {
   }
 }
 
-['pointerdown','mousedown','touchstart','pointerup','mouseup','touchend','click','auxclick','keydown'].forEach(type => {
-  document.addEventListener(type, handleNavigateEvent, true); // capture=true
-});
+const navigationEventTypes = ['pointerdown','mousedown','touchstart','pointerup','mouseup','touchend','click','auxclick','keydown'];
+let navigateInterceptorsActive = false;
+
+function addPageNavigateInterceptors() {
+  if (navigateInterceptorsActive) return;
+  navigationEventTypes.forEach(type => {
+    document.addEventListener(type, handleNavigateEvent, true); // capture=true
+  });
+  navigateInterceptorsActive = true;
+}
+
+function removePageNavigateInterceptors() {
+  if (!navigateInterceptorsActive) return;
+  navigationEventTypes.forEach(type => {
+    document.removeEventListener(type, handleNavigateEvent, true);
+  });
+  navigateInterceptorsActive = false;
+}
 
 function installHistoryInterceptor() {
   try {
@@ -90,6 +105,8 @@ function convertShortsLinks() {
 function enableNormalMode() {
   installHistoryInterceptor();
   const start = () => {
+    // Ensure page-level navigation interceptors are active in Normal mode only
+    addPageNavigateInterceptors();
     convertShortsLinks();
     if (linkObserver) linkObserver.disconnect();
     linkObserver = new MutationObserver(() => {
@@ -134,22 +151,31 @@ function enableHideMode() {
 // --- Apply Mode ---
 function applyMode(mode) {
   if (mode === currentMode) return;
+
   currentMode = mode;
+  // Clean up any existing observers
+  if (linkObserver) {
+    linkObserver.disconnect();
+    linkObserver = null;
+  }
+  if (hideObserver) {
+    hideObserver.disconnect();
+    hideObserver = null;
+  }
+  // Remove page-level navigation interceptors unless Normal mode re-enables them
+  removePageNavigateInterceptors();
+  
+  // Control the injected script behavior (communicate with page context)
+  try {
+    window.postMessage({ type: 'YSF_TOGGLE', enabled: (mode === 'normal') }, '*');
+  } catch {}
+
   if (mode === 'hide') {
-    // Stop link rewriting observer if any
-    if (linkObserver) {
-      linkObserver.disconnect();
-      linkObserver = null;
-    }
     enableHideMode();
   } else if (mode === 'normal') {
-    // Stop hide observer if any
-    if (hideObserver) {
-      hideObserver.disconnect();
-      hideObserver = null;
-    }
     enableNormalMode();
   }
+  // else mode = 'disabled', do nothing
 }
 
 // --- React to Popup Changes ---

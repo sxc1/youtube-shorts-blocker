@@ -4,7 +4,24 @@
     window.__yt_shorts_filter_installed__ = true;
     console.log('[YSF-injected] Installing history/navigation interceptor');
 
+    // Add a flag to control whether the interceptor is active
+    window.__yt_shorts_filter_enabled__ = true;
+
+    // Listen for toggle messages from content script to enable/disable behavior
+    window.addEventListener('message', function(event) {
+      try {
+        const data = event && event.data;
+        if (data && data.type === 'YSF_TOGGLE') {
+          window.__yt_shorts_filter_enabled__ = !!data.enabled;
+          console.log('[YSF-injected] toggle', window.__yt_shorts_filter_enabled__);
+        }
+      } catch {}
+    }, true);
+
     const toWatch = (url) => {
+      // Check if the filter is enabled
+      if (!window.__yt_shorts_filter_enabled__) return null;
+
       try {
         const u = new URL(url, location.origin);
         if (u.pathname.startsWith('/shorts/')) {
@@ -22,23 +39,30 @@
     const origReplace = history.replaceState;
 
     history.pushState = function(state, title, url) {
-      const fixed = toWatch(url);
-      if (fixed) {
-        console.log('[YSF-injected] history.pushState redirected');
-        return origReplace.call(this, state, title, fixed);
+      // Check if the filter is enabled
+      if (window.__yt_shorts_filter_enabled__) {
+        const fixed = toWatch(url);
+        if (fixed) {
+          console.log('[YSF-injected] history.pushState redirected');
+          return origReplace.call(this, state, title, fixed);
+        }
       }
       return origPush.apply(this, arguments);
     };
     history.replaceState = function(state, title, url) {
-      const fixed = toWatch(url);
-      if (fixed) {
-        console.log('[YSF-injected] history.replaceState redirected');
-        return origReplace.call(this, state, title, fixed);
+      // Check if the filter is enabled
+      if (window.__yt_shorts_filter_enabled__) {
+        const fixed = toWatch(url);
+        if (fixed) {
+          console.log('[YSF-injected] history.replaceState redirected');
+          return origReplace.call(this, state, title, fixed);
+        }
       }
       return origReplace.apply(this, arguments);
     };
 
     window.addEventListener('popstate', function() {
+      if (!window.__yt_shorts_filter_enabled__) return;
       const fixed = toWatch(location.href);
       if (fixed) {
         console.log('[YSF-injected] popstate redirected');
@@ -50,6 +74,9 @@
     try {
       if ('navigation' in window && navigation.addEventListener) {
         navigation.addEventListener('navigate', (e) => {
+          // Check if the filter is enabled
+          if (!window.__yt_shorts_filter_enabled__) return;
+          
           try {
             const dest = e && e.destination && e.destination.url ? new URL(e.destination.url) : null;
             if (dest && dest.pathname.startsWith('/shorts/')) {
@@ -72,6 +99,9 @@
 
     // YouTube SPA custom events
     window.addEventListener('yt-navigate-start', function() {
+      // Check if the filter is enabled
+      if (!window.__yt_shorts_filter_enabled__) return;
+      
       const fixed = toWatch(location.href);
       if (fixed) {
         console.log('[YSF-injected] yt-navigate-start redirected');
@@ -79,6 +109,9 @@
       }
     }, true);
     window.addEventListener('yt-navigate-finish', function() {
+      // Check if the filter is enabled
+      if (!window.__yt_shorts_filter_enabled__) return;
+      
       const fixed = toWatch(location.href);
       if (fixed) {
         console.log('[YSF-injected] yt-navigate-finish redirected');
@@ -88,6 +121,9 @@
 
     // Fallback periodic check
     setInterval(() => {
+      // Check if the filter is enabled
+      if (!window.__yt_shorts_filter_enabled__) return;
+      
       const fixed = toWatch(location.href);
       if (fixed) {
         console.log('[YSF-injected] interval redirected');
