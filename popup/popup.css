@@ -1,11 +1,16 @@
 body {
   font-family: Arial, sans-serif;
   padding: 10px;
-  width: 220px;
+  width: 300px;
 }
 h1 {
-  font-size: 16px;
+  font-size: 24px;
   margin-bottom: 10px;
+}
+h1 .title-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: text-bottom;
 }
 label {
   display: block;
